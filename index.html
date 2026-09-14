@@ -7,7 +7,7 @@
 
 <!--
   ============================================================================
-  DEADSTOP — single-file website.  Home + Privacy Policy + Terms of Use.
+  DEADSTOP — single-file website.  Home + Privacy Policy + Terms of Use + Support.
 
   BEFORE YOU PUBLISH, edit the five values in the CONFIG block directly below.
   They are the only things in this file that need changing. Every visible
@@ -38,15 +38,17 @@ window.DEADSTOP = {
 
 /* Runs before first paint so the correct page is already visible — no flash of
    the wrong view. Nav and footer links are real navigations to ?page=privacy /
-   ?page=terms / ? (home), so each page has a genuine, shareable URL you can
-   paste straight into App Store Connect. #privacy / #terms work too. With
-   JavaScript off, no attribute is set and all three views simply stack, which
-   keeps the legal text fully readable to any crawler or reviewer. */
+   ?page=terms / ?page=support / ? (home), so each page has a genuine, shareable
+   URL you can paste straight into App Store Connect — including the Support
+   URL field, which points at ?page=support. #privacy / #terms / #support work
+   too. With JavaScript off, no attribute is set and all four views simply
+   stack, which keeps the legal text and support info fully readable to any
+   crawler or reviewer. */
 (function () {
   var q = new URLSearchParams(location.search).get('page');
   var h = location.hash.replace('#', '');
   var p = q || h;
-  var view = (p === 'privacy' || p === 'terms') ? p : 'home';
+  var view = (p === 'privacy' || p === 'terms' || p === 'support') ? p : 'home';
   document.documentElement.setAttribute('data-view', view);
 })();
 </script>
@@ -514,10 +516,12 @@ footer { border-top: 1px solid var(--edge); padding: 52px 0 60px; position: rela
 
 html[data-view] #page-home,
 html[data-view] #page-privacy,
-html[data-view] #page-terms { display: none; }
+html[data-view] #page-terms,
+html[data-view] #page-support { display: none; }
 html[data-view="home"]    #page-home    { display: block; }
 html[data-view="privacy"] #page-privacy { display: block; }
 html[data-view="terms"]   #page-terms   { display: block; }
+html[data-view="support"] #page-support { display: block; }
 
 /* ------------------------------- MOTION --------------------------------- */
 
@@ -1156,6 +1160,7 @@ html[data-view="terms"]   #page-terms   { display: block; }
       <p>
         &copy; <span class="js-year">2026</span> Deadstop.  ·&nbsp;
         <a href="?page=terms">Terms of Use</a>  ·&nbsp;
+        <a href="?page=support">Support</a>  ·&nbsp;
         <a href="./">Home</a>
       </p>
     </div>
@@ -1592,6 +1597,157 @@ html[data-view="terms"]   #page-terms   { display: block; }
       <p>
         &copy; <span class="js-year">2026</span> Deadstop.  ·&nbsp;
         <a href="?page=privacy">Privacy Policy</a>  ·&nbsp;
+        <a href="?page=support">Support</a>  ·&nbsp;
+        <a href="./">Home</a>
+      </p>
+    </div>
+  </div>
+</article>
+
+<!-- ======================================================================= -->
+<!-- SUPPORT                                                                 -->
+<!-- The URL App Store Connect's "Support URL" field points to. Real support -->
+<!-- information (how to reach us, answers to the questions that actually    -->
+<!-- come up, how long we take), not just a mailto: link.                    -->
+<!-- ======================================================================= -->
+<article id="page-support" class="legal">
+  <div class="legal-wrap">
+    <a class="legal-back" href="./">&larr; Deadstop</a>
+
+    <h1 class="legal-title">Support</h1>
+    <p class="legal-date">We read every message ourselves — there's no support team, just us.</p>
+
+    <div class="legal-intro">
+      <p>
+        Deadstop is built and supported by <span class="js-entity">Shreyas Rao</span>.
+        If something's broken, confusing, or missing, the fastest way to reach
+        us is email:
+      </p>
+      <p><a class="js-mail" href="#">support@deadstop.app</a></p>
+    </div>
+
+    <nav class="toc" aria-label="Contents">
+      <span class="label">Contents</span>
+      <ol>
+        <li><a href="#s-contact">Contact us</a></li>
+        <li><a href="#s-blocking">Blocking isn't working</a></li>
+        <li><a href="#s-permissions">Screen Time permission</a></li>
+        <li><a href="#s-subscriptions">Subscriptions, restoring &amp; refunds</a></li>
+        <li><a href="#s-health">Apple Health &amp; rings</a></li>
+        <li><a href="#s-data">Deleting your data</a></li>
+        <li><a href="#s-feedback">Feature requests &amp; bugs</a></li>
+      </ol>
+    </nav>
+
+    <section id="s-contact">
+      <h2><span class="n">01</span> Contact us</h2>
+      <p>
+        Email <a class="js-mail" href="#">support@deadstop.app</a> for anything —
+        a bug, a billing question, a request, or just confusion about how
+        something works. Include your iOS version and, if it's a blocking
+        problem, which apps or websites you selected. We answer on a
+        reasonable-efforts basis, typically within a couple of business days,
+        though we don't guarantee a specific response time.
+      </p>
+    </section>
+
+    <section id="s-blocking">
+      <h2><span class="n">02</span> Blocking isn't working</h2>
+      <p>
+        Deadstop blocks apps and sites through Apple's Screen Time framework
+        (Family Controls / ManagedSettings), not with a technique of our own,
+        so most blocking issues trace back to one of these:
+      </p>
+      <ul>
+        <li>
+          <strong>Screen Time authorization was never granted, or was later
+          revoked.</strong> Check Settings &rarr; Screen Time on your iPhone,
+          and re-select your apps in Deadstop if you're unsure.
+        </li>
+        <li>
+          <strong>No apps or websites are actually selected.</strong> Open
+          Deadstop's app-picker and confirm your selection is still there —
+          reinstalling the app or a fresh iOS update can occasionally clear it.
+        </li>
+        <li>
+          <strong>A website shield shows the wrong domain or an already-visited
+          page slips through.</strong> This is a known limitation in Apple's own
+          Screen Time framework, not something we can fully control from inside
+          Deadstop — we track it and tighten our side of it with every release.
+        </li>
+      </ul>
+      <p>
+        If none of that explains it, email us with the exact apps/sites and what
+        you saw instead of a block.
+      </p>
+    </section>
+
+    <section id="s-permissions">
+      <h2><span class="n">03</span> Screen Time permission</h2>
+      <p>
+        The Screen Time / Family Controls prompt only appears on a real
+        iPhone signed in with your own Apple ID and passcode — it does not
+        work in the iOS Simulator. If you dismissed the prompt or tapped
+        "Don't Allow," go to Settings &rarr; Screen Time and enable it for
+        Deadstop there instead.
+      </p>
+    </section>
+
+    <section id="s-subscriptions">
+      <h2><span class="n">04</span> Subscriptions, restoring &amp; refunds</h2>
+      <p>
+        All payments are handled by Apple through In-App Purchase. To manage
+        or cancel a subscription, open Settings &rarr; your name &rarr;
+        Subscriptions on your iPhone — we have no ability to cancel or refund
+        a purchase from our side. To request a refund, use
+        <a href="https://reportaproblem.apple.com" rel="noopener">reportaproblem.apple.com</a>
+        or Apple's standard refund request flow.
+      </p>
+      <p>
+        Bought Pro and it's not unlocked after reinstalling or switching
+        devices? Use <strong>Restore Purchases</strong> in Deadstop's
+        settings — it's tied to the Apple ID you purchased with, not to an
+        account, since Deadstop doesn't have one.
+      </p>
+    </section>
+
+    <section id="s-health">
+      <h2><span class="n">05</span> Apple Health &amp; rings</h2>
+      <p>
+        Deadstop only writes to Apple Health if you grant it permission,
+        and only logs a strength-training workout when you finish a session.
+        If sessions aren't showing up in Health or your Activity rings, check
+        that Deadstop has write access under Settings &rarr; Privacy &amp;
+        Security &rarr; Health &rarr; Deadstop.
+      </p>
+    </section>
+
+    <section id="s-data">
+      <h2><span class="n">06</span> Deleting your data</h2>
+      <p>
+        Deadstop keeps everything on your device — there's no account and
+        nothing stored on a server of ours to delete. Deleting the app
+        deletes your training history, settings, and app selection along
+        with it. See the <a href="?page=privacy">Privacy Policy</a> for the
+        full picture of what's stored and where.
+      </p>
+    </section>
+
+    <section id="s-feedback">
+      <h2><span class="n">07</span> Feature requests &amp; bugs</h2>
+      <p>
+        We want to hear both. Email
+        <a class="js-mail" href="#">support@deadstop.app</a> with what you'd
+        like to see or what went wrong — screenshots and steps to reproduce
+        help most with bugs.
+      </p>
+    </section>
+
+    <div class="legal-foot">
+      <p>
+        &copy; <span class="js-year">2026</span> Deadstop.  ·&nbsp;
+        <a href="?page=privacy">Privacy Policy</a>  ·&nbsp;
+        <a href="?page=terms">Terms of Use</a>  ·&nbsp;
         <a href="./">Home</a>
       </p>
     </div>
@@ -1616,7 +1772,7 @@ html[data-view="terms"]   #page-terms   { display: block; }
     <div class="foot-links">
       <a href="?page=privacy">Privacy Policy</a>
       <a href="?page=terms">Terms of Use</a>
-      <a class="js-mail" href="#">Support</a>
+      <a href="?page=support">Support</a>
       <a class="js-appstore" href="#" data-soon="App Store">App Store</a>
     </div>
   </div>
@@ -1667,7 +1823,7 @@ html[data-view="terms"]   #page-terms   { display: block; }
      this, clicking a Contents link replaces the hash and a reload would land
      back on the home page. */
   var view = document.documentElement.getAttribute('data-view');
-  if ((view === 'privacy' || view === 'terms') &&
+  if ((view === 'privacy' || view === 'terms' || view === 'support') &&
       new URLSearchParams(location.search).get('page') !== view) {
     history.replaceState(null, '', '?page=' + view);
   }
