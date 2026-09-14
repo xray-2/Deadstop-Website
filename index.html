@@ -1,0 +1,1736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Deadstop — A rest timer that blocks your apps.</title>
+
+<!--
+  ============================================================================
+  DEADSTOP — single-file website.  Home + Privacy Policy + Terms of Use.
+
+  BEFORE YOU PUBLISH, edit the five values in the CONFIG block directly below.
+  They are the only things in this file that need changing. Every visible
+  occurrence on the page is filled in from them automatically.
+  ============================================================================
+-->
+
+<script>
+/* ============================ CONFIG — EDIT ME ============================ */
+window.DEADSTOP = {
+  /* 1. App Store URL. Leave "" until the app is live — every button then
+        politely reads "Coming to the App Store" instead of 404-ing. */
+  appStoreURL: "",
+
+  /* 2. The support address printed in the legal pages and the footer. */
+  contactEmail: "support@deadstop.app",
+
+  /* 3. The legal name App Review and your EULA identify as the developer. */
+  legalEntity: "Shreyas Rao",
+
+  /* 4. Governing law for the Terms. */
+  jurisdiction: "the State of California, United States",
+
+  /* 5. Effective date shown on both legal pages. */
+  effectiveDate: "September 12, 2026"
+};
+/* ========================== END CONFIG — EDIT ME ========================== */
+
+/* Runs before first paint so the correct page is already visible — no flash of
+   the wrong view. Nav and footer links are real navigations to ?page=privacy /
+   ?page=terms / ? (home), so each page has a genuine, shareable URL you can
+   paste straight into App Store Connect. #privacy / #terms work too. With
+   JavaScript off, no attribute is set and all three views simply stack, which
+   keeps the legal text fully readable to any crawler or reviewer. */
+(function () {
+  var q = new URLSearchParams(location.search).get('page');
+  var h = location.hash.replace('#', '');
+  var p = q || h;
+  var view = (p === 'privacy' || p === 'terms') ? p : 'home';
+  document.documentElement.setAttribute('data-view', view);
+})();
+</script>
+
+<meta name="description" content="Deadstop is a rest timer that blocks the apps that eat your session. Real system-level blocking between sets, not a reminder you can swipe away." />
+<meta name="theme-color" content="#0B0B0C" />
+<link rel="canonical" href="https://deadstop.app" />
+
+<!-- The app icon: the kettlebell drawn as a padlock. Same PNG the App Store
+     shows, quantized to a 16-color palette so it embeds in a few hundred
+     bytes instead of tens of thousands and this stays one file. -->
+<link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgBAMAAACBVGfHAAAAMFBMVEXyOQcRFBQtGRPRNAlHHRFuIw+KKA1WIBCrLQu9MAoAAAAAAAAAAAAAAAAAAAAAAAAm/9qVAAAAEHRSTlP/////////////AAAAAAAAPTr+NwAAAN5JREFUeNq10LFOAkEURuGPXZbQEJkYa5GehMbCDi21srXwGYxPgE9DyyOYGHs7CxMkJhoasmKjoigFOwu1ibeY3Htmzp/J5c+VdmMDsp7P7cP79fVeCCGEPlSg2hDkkikS6LgcjdrdtFSudtZnAsNfGFfKjGRrt346mL1No1IL7RDa4aJUFnJyzfJjtQw85PHF2cqcRSUdUumy6EeA81tcF+AHrXmTcQytY7zg670Ixc28aCLopBsgRauKxgZ4PkGvGL4PJl4e8TEpMl5XenYXQ4vtHpf7sH+Ep4H/qiVqGjCWlwU3AwAAAABJRU5ErkJggg==" />
+<link rel="apple-touch-icon" sizes="180x180" href="data:image/png;base64,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" />
+
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Deadstop — A rest timer that blocks your apps." />
+<meta property="og:description" content="Your rest is 90 seconds. Not 20 minutes. Deadstop blocks the apps that eat your session, and lifts the moment it's time to lift." />
+<meta property="og:url" content="https://deadstop.app" />
+<meta name="twitter:card" content="summary_large_image" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ---------------------------------------------------------------------------
+   The palette is lifted verbatim from DeadstopKit/Design/Tokens.swift. Dark
+   only, exactly as the app is dark only — there is no light mode to fall out
+   of sync with.
+
+   `--signal` marks the thing that demands action, and nothing else. Never a
+   routine fill, never a decorative accent. Scarcity is what makes it land.
+--------------------------------------------------------------------------- */
+:root {
+  --ground:        #0B0B0C;
+  --surface:       #141517;
+  --surface-raised:#1C1D20;
+  --edge:          #2A2B2E;
+  --text:          #EDEAE4;
+  --text-dim:      #8A8781;
+  --text-faint:    #7F7D79;
+  --signal:        #FF4D1C;
+
+  --card-fill:     rgba(255,255,255,0.055);
+  --card-fill-up:  rgba(255,255,255,0.09);
+  --rim:           rgba(255,255,255,0.10);
+  --rim-top:       rgba(255,255,255,0.20);
+
+  --r-card: 20px;
+  --r-pill: 100px;
+
+  --display: 'Space Grotesk', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --ui: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+  /* Motion is the brand. A dead-stop rep carries no momentum into the next
+     rep, so nothing here springs, bounces, or overshoots — ever. */
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --dur: 0.24s;
+
+  --gutter: 24px;
+  --maxw: 1120px;
+}
+
+html { scroll-behavior: smooth; background: var(--ground); }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+body {
+  background: var(--ground);
+  color: var(--text);
+  font-family: var(--ui);
+  font-size: 16px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+::selection { background: var(--signal); color: #0B0B0C; }
+
+/* The faint blueprint grid that sits behind the app's own screens. Same
+   34px spacing, same 0.5px lines, same ~5.5% white, faded toward the bottom
+   so it never competes with the content stacked over it. */
+.grid-field {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,0.055) 0.5px, transparent 0.5px),
+    linear-gradient(to bottom, rgba(255,255,255,0.055) 0.5px, transparent 0.5px);
+  background-size: 34px 34px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, rgba(0,0,0,0.55) 45%, transparent 92%);
+          mask-image: linear-gradient(to bottom, #000 0%, rgba(0,0,0,0.55) 45%, transparent 92%);
+}
+
+.wrap { width: 100%; max-width: var(--maxw); margin: 0 auto; padding: 0 var(--gutter); position: relative; z-index: 1; }
+
+/* ------------------------------- TYPE ----------------------------------- */
+
+/* Display — Space Grotesk. Reserved for things read as information:
+   headlines, numerals, section labels. Never for controls. */
+h1, h2, h3, .display, .wordmark, .numeral, .label {
+  font-family: var(--display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.06;
+}
+
+/* The small uppercase caption used for state and section labels.
+   11px / 500 / 1.1px tracking, exactly as Type_.label sets it. */
+.label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+.label-signal { color: var(--signal); }
+
+.wordmark {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  font-size: 19px;
+  color: var(--text);
+  text-decoration: none;
+  display: inline-block;
+}
+
+p { font-family: var(--ui); }
+a { color: inherit; }
+
+/* ------------------------------ BUTTONS --------------------------------- */
+/* A capsule with the system face in it, sized and weighted the way Apple
+   sizes and weights a prominent button. Deliberately not tracked display
+   caps: a control dressed like a label reads as a graphic you cannot press. */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  font-family: var(--ui);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 17px 30px;
+  border-radius: var(--r-pill);
+  border: none;
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.btn:active { transform: scale(0.97); opacity: 0.9; }
+
+/* One per screen, at most. */
+.btn-primary { background: var(--signal); color: #0B0B0C; }
+.btn-primary:hover { background: #FF5F33; }
+
+.btn-ink { background: var(--text); color: var(--ground); }
+.btn-ink:hover { background: #FFFDF8; }
+
+.btn-quiet {
+  background: transparent;
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.22);
+  font-size: 15px;
+  font-weight: 500;
+  padding: 13px 24px;
+}
+.btn-quiet:hover { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.4); }
+
+.btn[aria-disabled="true"] { cursor: default; opacity: 0.55; }
+.btn[aria-disabled="true"]:active { transform: none; }
+
+.btn svg { flex: none; }
+
+.cta-note {
+  font-size: 13px;
+  color: var(--text-faint);
+  letter-spacing: 0.01em;
+  margin-top: 14px;
+}
+
+/* -------------------------------- NAV ----------------------------------- */
+
+#nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: rgba(11,11,12,0.80);
+  -webkit-backdrop-filter: saturate(150%) blur(16px);
+          backdrop-filter: saturate(150%) blur(16px);
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+#nav.stuck { border-bottom-color: var(--edge); background: rgba(11,11,12,0.94); }
+.nav-inner {
+  height: 66px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.nav-mark { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; }
+/* The app icon itself: the kettlebell drawn as a padlock, keyhole and all.
+   Squared off with the same continuous-corner feel iOS gives a home screen
+   icon, so the mark reads as "the app" rather than as a random glyph. */
+.icon-mark { width: 26px; height: 26px; border-radius: 7px; display: block; flex: none; }
+.foot-mark .icon-mark { width: 24px; height: 24px; border-radius: 6.5px; }
+.nav-cta {
+  font-family: var(--ui);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 20px;
+  border-radius: var(--r-pill);
+  background: var(--text);
+  color: var(--ground);
+  text-decoration: none;
+  transition: transform var(--dur) var(--ease), opacity var(--dur) var(--ease);
+}
+.nav-cta:active { transform: scale(0.97); }
+.nav-cta[aria-disabled="true"] { background: transparent; color: var(--text-dim); box-shadow: inset 0 0 0 1px var(--edge); }
+
+/* ------------------------------ SECTIONS -------------------------------- */
+
+.sect { padding: 104px 0; position: relative; }
+.sect-sm { padding: 72px 0; position: relative; }
+.hairline { border-top: 1px solid var(--edge); }
+
+.sect-head { margin-bottom: 48px; }
+.sect-head .label { margin-bottom: 18px; display: block; }
+
+h2 { font-size: clamp(30px, 4.4vw, 46px); }
+h3 { font-size: 20px; letter-spacing: -0.015em; }
+
+.lede {
+  font-size: clamp(17px, 2vw, 20px);
+  line-height: 1.6;
+  color: var(--text-dim);
+  max-width: 62ch;
+}
+.lede strong { color: var(--text); font-weight: 500; }
+
+/* -------------------------------- HERO ---------------------------------- */
+
+/* An opaque ground, and lifted into its own stacking context above the
+   fixed grid-field the same way .wrap already is (z-index 1 beats the
+   grid's 0). The hero carries a real photo now, and the blueprint texture
+   behind it read as clutter competing with it, so the hero is the one
+   section that stays clean. Every section after it keeps the grid. */
+#hero { padding: clamp(56px, 8vw, 96px) 0 clamp(72px, 9vw, 104px); position: relative; z-index: 1; background: var(--ground); }
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1.02fr 0.98fr;
+  gap: clamp(36px, 5vw, 72px);
+  align-items: center;
+}
+.hero-eyebrow { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 26px; }
+.hero-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--signal); flex: none; }
+
+h1 {
+  font-size: clamp(42px, 6.6vw, 78px);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+  margin-bottom: 26px;
+}
+h1 .dim { color: var(--text-faint); display: block; }
+
+.hero-sub { font-size: clamp(16px, 1.8vw, 18.5px); line-height: 1.62; color: var(--text-dim); max-width: 46ch; margin-bottom: 34px; }
+.hero-sub strong { color: var(--text); font-weight: 500; }
+
+.hero-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+
+/* ---- THE HERO IMAGE ---------------------------------------------------- */
+/* No forced aspect-ratio box: earlier this held a fixed 4:5 frame with
+   object-fit: contain for a placeholder that didn't exist yet, and against
+   a real photo shot at a slightly different ratio that box left a hairline
+   letterbox gap top and bottom -- the one place the photo's own background
+   (a photograph, with grain) met the page's perfectly flat #0B0B0C, which
+   is exactly where a seam becomes visible even when the two colours match
+   on paper. The <img>'s width/height attributes give the browser the
+   photo's real intrinsic ratio, so letting it scale at width:100% fills the
+   box exactly, edge to edge, with no frame independent of the photo itself. */
+.hero-art {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  margin-left: auto;
+}
+.hero-art img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--r-card);
+}
+
+/* ------------------------------ PROBLEM --------------------------------- */
+/* One centered column. Fewer moving parts than a two-column layout, and the
+   simplest way to make a paragraph feel like the point of the page. */
+
+.problem { max-width: 640px; text-align: center; margin: 0 auto; }
+.problem h2 { font-size: clamp(28px, 4vw, 38px); margin-bottom: 24px; }
+.problem .lede { margin: 0 auto; text-align: center; }
+.problem .lede + .lede { margin-top: 18px; }
+
+/* -------------------------------- CARDS --------------------------------- */
+/* Two layers and no more: a translucent white fill, and a hairline rim that
+   is brighter along the top edge. That is how a dark-mode Apple surface is
+   built. */
+
+.card {
+  position: relative;
+  background: var(--card-fill);
+  border-radius: var(--r-card);
+  padding: 30px 28px 32px;
+  box-shadow: inset 0 0 0 1px var(--rim), inset 0 1px 0 0 var(--rim-top);
+  transition: background var(--dur) var(--ease);
+  height: 100%;
+}
+.card:hover { background: var(--card-fill-up); }
+
+.steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.step .numeral {
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  display: block;
+  margin-bottom: 26px;
+}
+.step h3 { margin-bottom: 12px; }
+.step p { font-size: 15.5px; line-height: 1.6; color: var(--text-dim); }
+
+.features { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+.feature h3 { font-size: 18px; margin-bottom: 10px; }
+.feature p { font-size: 15px; line-height: 1.6; color: var(--text-dim); }
+.feature .label { display: block; margin-bottom: 20px; }
+.feature .pro-tag {
+  display: inline-block;
+  font-family: var(--display);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--signal);
+  border: 1px solid rgba(255,77,28,0.34);
+  border-radius: var(--r-pill);
+  padding: 3px 9px;
+  margin-left: 8px;
+  vertical-align: 2px;
+}
+
+/* ------------------------------ FINAL CTA ------------------------------- */
+
+#final-cta { padding: clamp(88px, 11vw, 132px) 0; text-align: center; }
+#final-cta h2 { font-size: clamp(34px, 5.6vw, 62px); line-height: 1.0; letter-spacing: -0.035em; margin-bottom: 20px; }
+#final-cta h2 .dim { color: var(--text-faint); display: block; }
+#final-cta .lede { margin: 0 auto 36px; text-align: center; max-width: 48ch; }
+
+/* -------------------------------- FOOTER -------------------------------- */
+
+footer { border-top: 1px solid var(--edge); padding: 52px 0 60px; position: relative; z-index: 1; }
+.foot-inner { display: flex; flex-wrap: wrap; gap: 28px; justify-content: space-between; align-items: flex-start; }
+.foot-links { display: flex; flex-wrap: wrap; gap: 26px; }
+.foot-links a { font-size: 14.5px; color: var(--text-dim); text-decoration: none; transition: color var(--dur) var(--ease); }
+.foot-links a:hover { color: var(--text); }
+.foot-note { font-size: 13px; color: var(--text-faint); margin-top: 12px; max-width: 44ch; line-height: 1.6; }
+
+/* -------------------------------- LEGAL --------------------------------- */
+
+.legal { padding: 64px 0 96px; }
+.legal-wrap { max-width: 760px; margin: 0 auto; padding: 0 var(--gutter); position: relative; z-index: 1; }
+.legal-back { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text-dim); text-decoration: none; margin-bottom: 40px; transition: color var(--dur) var(--ease); }
+.legal-back:hover { color: var(--text); }
+.legal-title { font-size: clamp(34px, 5vw, 50px); letter-spacing: -0.035em; margin-bottom: 12px; }
+.legal-date { font-size: 13.5px; color: var(--text-faint); margin-bottom: 36px; }
+
+.legal-intro {
+  background: var(--card-fill);
+  border-radius: var(--r-card);
+  padding: 26px 26px 28px;
+  box-shadow: inset 0 0 0 1px var(--rim), inset 0 1px 0 0 var(--rim-top);
+  margin-bottom: 44px;
+}
+.legal-intro p { font-size: 16px; line-height: 1.65; color: var(--text-dim); }
+.legal-intro p + p { margin-top: 14px; }
+.legal-intro strong { color: var(--text); font-weight: 500; }
+
+.toc { margin-bottom: 52px; }
+.toc .label { display: block; margin-bottom: 16px; }
+.toc ol { list-style: none; counter-reset: toc; display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px 28px; }
+.toc li { counter-increment: toc; }
+.toc a {
+  display: block;
+  font-size: 14.5px;
+  color: var(--text-dim);
+  text-decoration: none;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  transition: color var(--dur) var(--ease);
+}
+.toc a::before {
+  content: counter(toc, decimal-leading-zero);
+  font-family: var(--display);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  margin-right: 12px;
+}
+.toc a:hover { color: var(--text); }
+
+.legal section { margin-bottom: 44px; scroll-margin-top: 90px; }
+.legal section h2 {
+  font-size: 21px;
+  letter-spacing: -0.015em;
+  margin-bottom: 16px;
+  padding-bottom: 0;
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+}
+.legal section h2 .n {
+  font-family: var(--display);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  flex: none;
+}
+.legal p, .legal li { font-size: 15.5px; line-height: 1.72; color: var(--text-dim); }
+.legal p + p { margin-top: 14px; }
+.legal strong { color: var(--text); font-weight: 500; }
+.legal h4 { font-family: var(--ui); font-size: 15.5px; font-weight: 600; color: var(--text); margin: 22px 0 8px; }
+.legal ul { list-style: none; margin: 12px 0 0; }
+.legal ul li { position: relative; padding-left: 20px; margin-bottom: 9px; }
+.legal ul li::before { content: ''; position: absolute; left: 3px; top: 11px; width: 5px; height: 1px; background: var(--text-faint); }
+.legal p a, .legal li a, .legal .callout a { color: var(--text); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--text-faint); }
+.legal p a:hover, .legal li a:hover { text-decoration-color: var(--text); }
+.legal .toc a, .legal .legal-back { text-decoration: none; }
+
+/* A pull-out for the clauses that carry the most weight — the ones App Review
+   looks for, and the ones a reader deserves to not have to hunt for. */
+.callout {
+  background: var(--card-fill);
+  border-radius: var(--r-card);
+  padding: 22px 24px;
+  box-shadow: inset 0 0 0 1px var(--rim), inset 0 1px 0 0 var(--rim-top);
+  margin: 20px 0 0;
+}
+.callout .label { display: block; margin-bottom: 12px; }
+.callout p { font-size: 15px; }
+
+.legal-foot { margin-top: 56px; padding-top: 32px; border-top: 1px solid var(--edge); }
+.legal-foot p { font-size: 14px; color: var(--text-faint); }
+
+/* ------------------------------- ROUTING -------------------------------- */
+/* With JS disabled nothing is hidden and all three views stack, so the legal
+   text stays reachable to any reviewer or crawler. */
+
+html[data-view] #page-home,
+html[data-view] #page-privacy,
+html[data-view] #page-terms { display: none; }
+html[data-view="home"]    #page-home    { display: block; }
+html[data-view="privacy"] #page-privacy { display: block; }
+html[data-view="terms"]   #page-terms   { display: block; }
+
+/* ------------------------------- MOTION --------------------------------- */
+
+.fade-up { opacity: 0; transform: translateY(14px); transition: opacity 0.5s var(--ease), transform 0.5s var(--ease); }
+.fade-up.in { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-up { opacity: 1; transform: none; transition: none; }
+  .btn, .card, .nav-cta { transition: none; }
+}
+
+:focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; border-radius: 4px; }
+
+/* ----------------------------- RESPONSIVE ------------------------------- */
+
+@media (max-width: 900px) {
+  .hero-grid { grid-template-columns: 1fr; gap: 44px; }
+  .hero-art { margin: 0 auto; max-width: 400px; }
+  .hero-sub, h1 { max-width: none; }
+  .steps, .features { grid-template-columns: 1fr; }
+  .sect { padding: 76px 0; }
+}
+
+@media (max-width: 640px) {
+  :root { --gutter: 20px; }
+  h1 { font-size: clamp(36px, 10vw, 48px); }
+  .nav-inner { height: 60px; }
+  .toc ol { grid-template-columns: 1fr; }
+  .btn { width: 100%; }
+  .hero-actions { flex-direction: column; align-items: stretch; }
+  .sect { padding: 64px 0; }
+  #final-cta .btn { width: auto; }
+  .foot-inner { flex-direction: column; gap: 24px; }
+}
+
+/* The narrowest phones still in service (320–400pt). The CTA keeps its single
+   line here by shrinking, rather than wrapping "Download on the / App Store"
+   across two — a broken phrase reads as a layout bug, a smaller pill doesn't. */
+@media (max-width: 420px) {
+  .btn { font-size: 15px; padding: 16px 18px; gap: 8px; }
+  .cta-note { font-size: 12.5px; }
+  .card { padding: 26px 22px 28px; }
+  .legal-intro, .callout { padding: 22px 20px; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="grid-field" aria-hidden="true"></div>
+
+<!-- ======================================================================= -->
+<!-- NAV                                                                     -->
+<!-- ======================================================================= -->
+<nav id="nav">
+  <div class="wrap nav-inner">
+    <a class="nav-mark" href="./" aria-label="Deadstop — home">
+      <img class="icon-mark" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABABAMAAABYR2ztAAAAMFBMVEXxOQcTFBQvGRLQNAmSKg1wJA+qLQtKHRG6MApZIBAAAAAAAAAAAAAAAAAAAAAAAAA3n/mhAAAAEHRSTlP/////////////AAAAAAAAPTr+NwAAAc1JREFUeNrtkz1LA0EQht/c5ZJLMJCNHyiKiqWiBG0so61NSoWA6D9QLCz96Kz8A4Jiq7Wd5CccFjZCkiJgVMSzUE6TeBa3e9nZXbCx063m9p6beWfmPeBPnITyvICuRy5sKXaXyg/3L9bQwUfdmCE16otw+TK+tXrASvwe13uGDE6fVM161jNUZGmhQeRrACDBMpkAABYbagbbB/q3x2u12tQOgKI2kCRjBRFvMDapiXT64DzyOJ3tqZTaRFcEX3I/km5busxpgCUB00BZAz7zCIT0PODpc1hqoHh32D8zlmslArgtrc99xga3GGOssMbYiGEX6axEp1v6Loh1dg3rbv9kufm6PPgnPcOL/F2npGXIuCSzvotVWjrUBvUaUEI4RgBJ/snAXDMKAp+W4KB7d8XX9K5omOYTBM6pCKu3QERWDKl7FMCPw7BIgck4g8PVlWkXD1GXt2+wnehm2NNMC6BdxBG9sbT1Vc0Ar5jyhFzhSgE04ubOzBn8eDxcY8IzArl4QrbiB27ZwRLCC2JbASRzSjPrx7REJ68AvjqHEn2fOlU9Sf4bkyc/aI1ZfdQESFZ14EYmZgzL6jZ7xGbV+Mu6Fb6RiRP8n18/39+eZKpWKjzZAAAAAElFTkSuQmCC" alt="" aria-hidden="true" width="26" height="26" />
+      <span class="wordmark">Deadstop</span>
+    </a>
+    <a class="nav-cta js-appstore" href="#" data-soon="Coming soon">Download</a>
+  </div>
+</nav>
+
+<!-- ======================================================================= -->
+<!-- HOME                                                                    -->
+<!-- ======================================================================= -->
+<main id="page-home">
+
+  <!-- HERO -->
+  <section id="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <div class="hero-eyebrow fade-up">
+          <span class="hero-dot" aria-hidden="true"></span>
+          <span class="label">A rest timer that blocks your apps</span>
+        </div>
+
+        <h1 class="fade-up">
+          Unlock a more<br />disciplined you.
+        </h1>
+
+        <p class="hero-sub fade-up">
+          Deadstop blocks the apps that turn a 90 second rest into a 10 minute
+          scroll. Your phone stays locked between sets, so you actually rest,
+          then get back to lifting.
+        </p>
+
+        <div class="hero-actions fade-up">
+          <a class="btn btn-primary js-appstore" href="#">
+            <svg width="17" height="20" viewBox="0 0 17 20" fill="currentColor" aria-hidden="true">
+              <path d="M14.03 10.62c-.02-2.2 1.8-3.26 1.88-3.31-1.02-1.5-2.61-1.7-3.18-1.73-1.35-.14-2.64.8-3.33.8-.69 0-1.75-.78-2.87-.76-1.48.02-2.84.86-3.6 2.18-1.53 2.67-.39 6.62 1.1 8.78.73 1.06 1.6 2.25 2.74 2.2 1.1-.04 1.52-.71 2.85-.71 1.33 0 1.71.71 2.87.69 1.19-.02 1.94-1.08 2.67-2.14.84-1.23 1.19-2.42 1.2-2.48-.03-.01-2.3-.88-2.33-3.52zM11.85 3.9c.61-.74 1.02-1.77.91-2.8-.88.04-1.95.59-2.58 1.32-.56.65-1.06 1.7-.93 2.7.98.08 1.98-.5 2.6-1.22z"/>
+            </svg>
+            Download on the App Store
+          </a>
+        </div>
+        <p class="cta-note fade-up">Free to start ·&nbsp; iPhone ·&nbsp; iOS 26 and later</p>
+      </div>
+
+      <!-- ================================================================= -->
+      <!-- HERO IMAGE                                                        -->
+      <!-- A hand holding an iPhone on the "Rest is over" screen. Shot on      -->
+      <!-- #0B0B0C, which is why it sits into the page with no visible edge.  -->
+      <!-- Embedded as WebP (q90) rather than the source PNG: 45KB vs 550KB    -->
+      <!-- with no visible difference, so the single file stays light.        -->
+      <!-- ================================================================= -->
+      <div class="hero-art fade-up" id="heroArt">
+        <img src="data:image/webp;base64,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" alt="A hand holding an iPhone showing Deadstop's rest screen: &quot;Rest is over, Bench Press, Set 3 of 4&quot; with a Start Set button." width="1258" height="1494" />
+      </div>
+    </div>
+  </section>
+
+  <!-- PROBLEM -->
+  <section class="sect hairline">
+    <div class="wrap problem">
+      <span class="label fade-up" style="display:block;margin-bottom:16px;">The problem</span>
+      <h2 class="fade-up">You didn't come to the gym to scroll.</h2>
+      <p class="lede fade-up">
+        Every rest timer tells you to rest 90 seconds. Almost nobody actually
+        does. You finish a set, pick up your phone to check the clock, and a
+        notification is waiting. Ninety seconds turns into five minutes. Five
+        minutes turns into your whole session.
+      </p>
+      <p class="lede fade-up">
+        It's not a willpower problem. Your phone is built to keep you
+        scrolling, and no amount of discipline beats that after a long day.
+        The only fix that actually works is taking the phone away, and giving
+        it back the moment your rest is over.
+      </p>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="how" class="sect hairline">
+    <div class="wrap">
+      <div class="sect-head fade-up">
+        <span class="label">How it works</span>
+        <h2>Three steps, then it runs itself.</h2>
+      </div>
+      <div class="steps">
+        <div class="card step fade-up">
+          <span class="numeral">01</span>
+          <h3>Pick your distractions</h3>
+          <p>
+            Choose the apps that get you every time: Instagram, TikTok, X,
+            whatever it is for you. iOS keeps your choice private. Deadstop
+            never sees which apps you picked.
+          </p>
+        </div>
+        <div class="card step fade-up">
+          <span class="numeral">02</span>
+          <h3>Rest like normal</h3>
+          <p>
+            Log your set and the clock starts. That's your only phone time
+            until it runs out. Pick how strict it should be, from none at all
+            to a short grace period.
+          </p>
+        </div>
+        <div class="card step fade-up">
+          <span class="numeral">03</span>
+          <h3>The block kicks in</h3>
+          <p>
+            When your rest ends, those apps lock. Not a reminder you can
+            swipe away. A real block, built into iOS, that holds even if you
+            force-quit Deadstop.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="app" class="sect hairline">
+    <div class="wrap">
+      <div class="sect-head fade-up">
+        <span class="label">The app</span>
+        <h2>Everything else, kept simple.</h2>
+      </div>
+      <div class="features">
+        <div class="card feature fade-up">
+          <span class="label">Scroll seconds <span class="pro-tag">Pro</span></span>
+          <h3>Only real scrolling counts</h3>
+          <p>
+            Stretching, chalking up, talking to your training partner. None
+            of it counts against your rest. Only time actually spent in a
+            blocked app does.
+          </p>
+        </div>
+        <div class="card feature fade-up">
+          <span class="label">Arrival <span class="pro-tag">Pro</span></span>
+          <h3>Starts when you walk in</h3>
+          <p>
+            Deadstop notices when you get to your gym and offers to start
+            your session. Your gym's location stays on your phone and is
+            never sent anywhere.
+          </p>
+        </div>
+        <div class="card feature fade-up">
+          <span class="label">Apple Health</span>
+          <h3>Counts toward your rings</h3>
+          <p>
+            Every finished session is saved to Apple Health as a strength
+            workout, so it shows up in Fitness like anything else you do.
+          </p>
+        </div>
+        <div class="card feature fade-up">
+          <span class="label">Privacy</span>
+          <h3>Nothing leaves your phone</h3>
+          <p>
+            No account, no sign-in, no analytics, no ads. Your training, your
+            app choices, and your health data all stay on your device.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section id="final-cta" class="hairline">
+    <div class="wrap">
+      <h2 class="fade-up">Unlock a more <span class="dim">disciplined you.</span></h2>
+      <p class="lede fade-up">
+        Free to start. Pro unlocks blocking for $4.99 a month, $29.99 a year,
+        or $59.99 once.
+      </p>
+      <div class="fade-up" style="display:flex;justify-content:center;">
+        <a class="btn btn-primary js-appstore" href="#">
+          <svg width="17" height="20" viewBox="0 0 17 20" fill="currentColor" aria-hidden="true">
+            <path d="M14.03 10.62c-.02-2.2 1.8-3.26 1.88-3.31-1.02-1.5-2.61-1.7-3.18-1.73-1.35-.14-2.64.8-3.33.8-.69 0-1.75-.78-2.87-.76-1.48.02-2.84.86-3.6 2.18-1.53 2.67-.39 6.62 1.1 8.78.73 1.06 1.6 2.25 2.74 2.2 1.1-.04 1.52-.71 2.85-.71 1.33 0 1.71.71 2.87.69 1.19-.02 1.94-1.08 2.67-2.14.84-1.23 1.19-2.42 1.2-2.48-.03-.01-2.3-.88-2.33-3.52zM11.85 3.9c.61-.74 1.02-1.77.91-2.8-.88.04-1.95.59-2.58 1.32-.56.65-1.06 1.7-.93 2.7.98.08 1.98-.5 2.6-1.22z"/>
+          </svg>
+          Download on the App Store
+        </a>
+      </div>
+      <p class="cta-note fade-up">iPhone ·&nbsp; iOS 26 and later ·&nbsp; No account required</p>
+    </div>
+  </section>
+</main>
+
+<!-- ======================================================================= -->
+<!-- PRIVACY POLICY                                                          -->
+<!-- ======================================================================= -->
+<article id="page-privacy" class="legal">
+  <div class="legal-wrap">
+    <a class="legal-back" href="./">&larr; Deadstop</a>
+
+    <h1 class="legal-title">Privacy Policy</h1>
+    <p class="legal-date">Effective <span class="js-date">September 12, 2026</span></p>
+
+    <div class="legal-intro">
+      <p>
+        <strong>Deadstop has no account, no login, and no server that stores your
+        data.</strong> Your training history, the apps you chose to block, your
+        gym's location and everything read from Apple Health are held on your
+        iPhone and are not transmitted to us.
+      </p>
+      <p>
+        We do not use analytics, advertising or tracking software of any kind. We
+        do not sell or share personal information, and we never build a profile of
+        you. The only information that leaves your device is the purchase record
+        Apple and our payment provider need in order to know that your
+        subscription is active.
+      </p>
+      <p>
+        This policy explains that in full: what stays on the device, the one thing
+        that doesn't, and the rights you have either way.
+      </p>
+    </div>
+
+    <nav class="toc" aria-label="Contents">
+      <span class="label">Contents</span>
+      <ol>
+        <li><a href="#p-summary">At a glance</a></li>
+        <li><a href="#p-ondevice">What stays on your device</a></li>
+        <li><a href="#p-screentime">Screen Time &amp; app blocking</a></li>
+        <li><a href="#p-health">Apple Health data</a></li>
+        <li><a href="#p-location">Location</a></li>
+        <li><a href="#p-notifications">Notifications</a></li>
+        <li><a href="#p-purchases">Subscriptions &amp; payments</a></li>
+        <li><a href="#p-diagnostics">Diagnostics you choose to send</a></li>
+        <li><a href="#p-notcollected">What we never collect</a></li>
+        <li><a href="#p-retention">Retention &amp; deletion</a></li>
+        <li><a href="#p-rights">Your rights</a></li>
+        <li><a href="#p-children">Children</a></li>
+        <li><a href="#p-security">Security</a></li>
+        <li><a href="#p-changes">Changes &amp; contact</a></li>
+      </ol>
+    </nav>
+
+    <section id="p-summary">
+      <h2><span class="n">01</span> At a glance</h2>
+      <p>
+        Deadstop is an iPhone app that runs a rest timer between your working sets
+        and blocks distracting apps while that timer runs. It is a personal tool
+        you use on yourself. It is not a parental control, not a monitoring
+        product, and it reports to nobody.
+      </p>
+      <p>The short version of everything below:</p>
+      <ul>
+        <li><strong>No account.</strong> You never create one, and we have nothing to attach data to.</li>
+        <li><strong>No analytics or tracking.</strong> The app contains no analytics SDK, no advertising SDK, and no tracking technology. We do not track you across apps or websites, and we do not ask for permission to, because we have no use for it.</li>
+        <li><strong>No sale or sharing.</strong> We do not sell personal information, share it for cross-context behavioural advertising, or provide it to data brokers.</li>
+        <li><strong>One exception, and it is Apple's.</strong> Buying Deadstop Pro creates a purchase record handled by Apple and by RevenueCat, our subscription provider. That record is described in section 07.</li>
+      </ul>
+    </section>
+
+    <section id="p-ondevice">
+      <h2><span class="n">02</span> What stays on your device</h2>
+      <p>
+        Deadstop stores the following on your iPhone, in the app's own storage and
+        in an Apple App Group shared with its extensions. None of it is uploaded,
+        backed up to us, or readable by us:
+      </p>
+      <ul>
+        <li>Your training split, exercises, day names and per-day rest settings.</li>
+        <li>Your session history: sets logged, rest prescribed, rest actually taken, and session start and end times.</li>
+        <li>Your settings: strictness, budget mode, alert preferences.</li>
+        <li>The opaque Screen Time token representing your app selection (section 03).</li>
+        <li>Your gym's coordinates and radius, if you set one (section 05).</li>
+        <li>Health values read from Apple Health for display (section 04).</li>
+        <li>Timing measurements used by the in-app Diagnostics screen (section 08).</li>
+      </ul>
+      <p>
+        This data may be included in your personal iCloud or encrypted local
+        backup of the device, in the same way every other app's data is. That
+        backup belongs to you and is governed by Apple's privacy policy, not ours.
+        We have no access to it.
+      </p>
+    </section>
+
+    <section id="p-screentime">
+      <h2><span class="n">03</span> Screen Time &amp; app blocking</h2>
+      <p>
+        The blocking in Deadstop is performed by Apple's Screen Time system,
+        specifically the Family Controls, Managed Settings and Device Activity
+        frameworks, using the <strong>individual</strong> authorisation mode, in
+        which you restrict your own device.
+      </p>
+      <p>
+        Deadstop cannot see which apps you selected. When you pick apps, iOS
+        presents its own picker and returns an opaque token, not a list. That
+        token is meaningless outside your device and outside Deadstop, cannot be
+        decoded into app names by us or by anyone else, and is stored locally so
+        the blocking rules can be applied.
+      </p>
+
+      <div class="callout">
+        <span class="label label-signal">Stated plainly</span>
+        <p>
+          <strong>Screen Time data never leaves your device.</strong> Deadstop
+          does not transmit, log, sell or analyse your app selections or your
+          device usage. It is never used for advertising, profiling, market
+          research or any secondary purpose. It is used for one thing: applying
+          and lifting the restriction you asked for, while you train.
+        </p>
+      </div>
+
+      <p style="margin-top:20px;">
+        Deadstop also uses a usage threshold from the Device Activity framework
+        when Scroll Seconds is enabled, so the app can tell how much of your rest
+        budget has been spent inside the blocked apps. That measurement is
+        evaluated on the device by an Apple extension, is reported to Deadstop
+        only as elapsed time against your budget, and is not retained afterward.
+      </p>
+      <p>
+        Screen Time access is optional. If you decline it, Deadstop still runs as
+        a rest timer. It simply cannot block anything. You can revoke it at any
+        time from Settings inside the app, which immediately releases every
+        restriction, or from iOS Settings.
+      </p>
+    </section>
+
+    <section id="p-health">
+      <h2><span class="n">04</span> Apple Health data</h2>
+      <p>
+        If you grant Health access, Deadstop uses HealthKit in two directions,
+        both entirely on your device.
+      </p>
+      <h4>What it writes</h4>
+      <p>
+        Each finished session is saved to Apple Health as a strength training
+        workout, with its start time, end time and duration, so it appears in
+        Fitness and counts toward your activity rings like any other workout.
+      </p>
+      <h4>What it reads</h4>
+      <p>
+        Deadstop reads resting heart rate, heart rate variability, sleep and body
+        mass, and displays them alongside your rest data so recovery and training
+        can be read together. These values are fetched from HealthKit for display
+        and are never uploaded.
+      </p>
+
+      <div class="callout">
+        <span class="label label-signal">Health data commitments</span>
+        <p>
+          Health data obtained through HealthKit is <strong>never</strong> used
+          for advertising or marketing, never used for any form of data mining or
+          resale, and never disclosed to any third party, including advertisers,
+          analytics providers, data brokers or insurers. It is not shared with our
+          payment provider. It is used solely to present your own information back
+          to you inside the app.
+        </p>
+      </div>
+
+      <p style="margin-top:20px;">
+        Health access is optional and granular. You control each category in the
+        Health app under Sharing, and the rest timer and blocking work whether you
+        grant it or not. Revoking access stops Deadstop reading further data
+        immediately. Workouts Deadstop previously wrote remain in Apple Health
+        until you delete them there, because they are your records, held in
+        Apple's app rather than ours.
+      </p>
+    </section>
+
+    <section id="p-location">
+      <h2><span class="n">05</span> Location</h2>
+      <p>
+        Deadstop can start a session on its own when you arrive at your gym. To do
+        that, you mark your gym once, and iOS watches for you entering that region.
+      </p>
+      <p>
+        Your gym's coordinates and radius are stored on your device. The
+        geofence is registered with iOS and monitored by the operating system,
+        which wakes Deadstop only to say that a boundary was crossed.
+        <strong>Your location is never transmitted to us, never logged as a
+        history, and never used to build a movement profile.</strong> Deadstop
+        does not track where you are. It knows one place: the one you told it.
+      </p>
+      <p>
+        When you search for your gym on the map, that search is handled by Apple
+        Maps and is subject to Apple's privacy policy. Location access is optional;
+        declining it only means sessions start when you tap to start them. You can
+        change or revoke it in iOS Settings at any time, and deleting your saved
+        gym removes the geofence.
+      </p>
+    </section>
+
+    <section id="p-notifications">
+      <h2><span class="n">06</span> Notifications and alarms</h2>
+      <p>
+        Deadstop's alerts for rest ending and for arriving at your gym are
+        <strong>local notifications and alarms scheduled on your device</strong>.
+        There is no push server, no push token, and nothing is sent over the
+        network to deliver them. They are posted as time-sensitive so they can
+        reach you through Focus and silent mode, which matters when the phone is
+        in a pocket and a set is waiting.
+      </p>
+    </section>
+
+    <section id="p-purchases">
+      <h2><span class="n">07</span> Subscriptions &amp; payments</h2>
+      <p>
+        Deadstop Pro is sold exclusively through Apple's In-App Purchase.
+        <strong>We never see, receive or handle your payment details.</strong>
+        Your card, billing address and Apple Account details go to Apple and stay
+        with Apple, governed by Apple's privacy policy.
+      </p>
+      <p>
+        To know whether your subscription is active, including across a reinstall
+        or a new iPhone, Deadstop uses <strong>RevenueCat</strong>, a subscription
+        management provider, acting as our processor. When you purchase or restore,
+        RevenueCat receives:
+      </p>
+      <ul>
+        <li>A randomly generated anonymous identifier. Deadstop does not sign you in or supply your name, email address or Apple Account ID, so this identifier is not linked to your identity by us.</li>
+        <li>The Apple-issued transaction receipt, which it validates with Apple: which product was bought, when, in which country's storefront, and whether it is still active.</li>
+        <li>Basic technical details of the purchase, such as app version, device platform and operating system version.</li>
+      </ul>
+      <p>
+        This is the only information Deadstop transmits off your device, and it is
+        transmitted only when you purchase, restore, or the app checks whether your
+        entitlement is still valid. It contains no training data, no health data,
+        no location and no Screen Time data. RevenueCat processes it on our behalf
+        to operate the subscription, and its handling is described in RevenueCat's
+        own privacy policy at
+        <a href="https://www.revenuecat.com/privacy" rel="noopener">revenuecat.com/privacy</a>.
+      </p>
+      <p>
+        Refunds, billing questions and cancellations are handled by Apple, since
+        Apple is the merchant of record. See section 07 of our
+        <a href="?page=terms">Terms of Use</a> for the subscription terms
+        themselves.
+      </p>
+    </section>
+
+    <section id="p-diagnostics">
+      <h2><span class="n">08</span> Diagnostics you choose to send</h2>
+      <p>
+        Deadstop measures how quickly a block is reapplied after a rest ends, and
+        shows you those timings in Settings under Diagnostics. Those measurements
+        live on your device and are not collected by us.
+      </p>
+      <p>
+        That screen has an export control, which produces a plain CSV file of the
+        raw timings and hands it to the iOS share sheet. Nothing is sent unless you
+        use it, and where it goes is entirely your choice. If you send it to us to
+        help diagnose a problem, we use it only for that and delete it once the
+        issue is resolved. It contains timing data, not app names, health data or
+        location.
+      </p>
+    </section>
+
+    <section id="p-notcollected">
+      <h2><span class="n">09</span> What we never collect</h2>
+      <p>For the avoidance of any doubt, Deadstop does not collect, request or receive:</p>
+      <ul>
+        <li>Your name, email address, phone number or postal address.</li>
+        <li>Contacts, photos, microphone, camera or calendar data.</li>
+        <li>Advertising identifiers (IDFA). Deadstop contains no advertising software and will never present App Tracking Transparency prompts, because it does not track.</li>
+        <li>Device identifiers used for cross-app or cross-site tracking.</li>
+        <li>Behavioural analytics, session recordings, heat maps or crash reporting SDKs.</li>
+        <li>Any information about other people. Deadstop is used on yourself, by yourself.</li>
+      </ul>
+      <p>
+        We do not sell or share personal information within the meaning of the
+        California Consumer Privacy Act, and we have never done so. We do not
+        engage in profiling or automated decision-making producing legal or
+        similarly significant effects within the meaning of the GDPR.
+      </p>
+    </section>
+
+    <section id="p-retention">
+      <h2><span class="n">10</span> Retention &amp; deletion</h2>
+      <p>
+        Because your data lives on your device, <strong>you hold it and you delete
+        it.</strong> Deleting Deadstop removes its stored data from your iPhone
+        along with the app, and releases every Screen Time restriction it had
+        applied. Individual sessions can be deleted inside the app, your gym can be
+        removed, and Screen Time access can be handed back at any time from
+        Settings.
+      </p>
+      <p>
+        Workouts Deadstop wrote to Apple Health stay in Health after you delete the
+        app, because they are yours and Health is where they belong; remove them in
+        the Health app if you'd prefer they were gone.
+      </p>
+      <p>
+        The purchase record described in section 07 is retained by Apple and by
+        RevenueCat for as long as needed to operate and account for the
+        subscription, and to meet tax and financial record-keeping obligations.
+        Because that record is tied to an anonymous identifier rather than to your
+        name, we typically cannot locate it from your email alone. Write to us
+        and we will tell you what identifier we would need and help you find it.
+      </p>
+    </section>
+
+    <section id="p-rights">
+      <h2><span class="n">11</span> Your rights</h2>
+      <p>
+        Depending on where you live, you may have rights to access, correct,
+        delete, restrict or object to the processing of your personal data, to
+        data portability, to withdraw consent, and to be free of discrimination
+        for exercising them. These include rights under the EU and UK General Data
+        Protection Regulation and the California Consumer Privacy Act.
+      </p>
+      <p>
+        In Deadstop these rights are mostly self-executing: the data is in your
+        hands, on your device, and you can view, export or destroy it without
+        asking us. For the purchase record, or to ask anything else, write to
+        <a class="js-mail" href="#">support@deadstop.app</a> and we will respond
+        within thirty days. We do not charge for this and will not treat you
+        differently for asking.
+      </p>
+      <p>
+        Where the GDPR applies, our lawful basis is the performance of our contract
+        with you for data necessary to run the app and your subscription, your
+        consent for the optional device permissions (Screen Time, Health,
+        location and notifications, each of which you may withdraw at any time in
+        iOS Settings), and our legitimate interest in keeping the app working. You
+        also have the right to lodge a complaint with your local supervisory
+        authority.
+      </p>
+      <p>
+        <strong>International transfers.</strong> The on-device data never travels
+        anywhere. The purchase record may be processed on servers in the United
+        States by Apple and RevenueCat; where required, those transfers rely on the
+        European Commission's Standard Contractual Clauses or an equivalent
+        safeguard.
+      </p>
+    </section>
+
+    <section id="p-children">
+      <h2><span class="n">12</span> Children</h2>
+      <p>
+        Deadstop is a barbell training tool intended for people aged 13 and over,
+        and it is not directed to children under 13. We do not knowingly collect
+        personal information from children under 13, and the app is not designed
+        to. If you believe a child has provided information to us, contact us and
+        we will delete it.
+      </p>
+      <p>
+        Deadstop uses Screen Time in individual mode only, for self-restriction. It
+        cannot be used to monitor or restrict another person's device, and it
+        reports nothing to a parent, guardian, employer or anyone else.
+      </p>
+    </section>
+
+    <section id="p-security">
+      <h2><span class="n">13</span> Security</h2>
+      <p>
+        Deadstop's data sits inside the iOS application sandbox and an App Group
+        shared only with Deadstop's own extensions, protected by the device
+        encryption that your passcode, Face ID or Touch ID unlocks. No other app
+        can read it. Health data is held by Apple in the encrypted HealthKit store
+        and released to Deadstop only for the categories you permit.
+      </p>
+      <p>
+        The purchase request in section 07 travels over TLS. Keeping your iPhone up
+        to date and locked with a passcode is the most effective protection for
+        everything described here, because that is where all of it lives.
+      </p>
+      <p>
+        No method of storage or transmission is perfectly secure, and we cannot
+        guarantee absolute security. What we can do is hold as little as possible,
+        which is what we have done.
+      </p>
+    </section>
+
+    <section id="p-changes">
+      <h2><span class="n">14</span> Changes &amp; contact</h2>
+      <p>
+        If this policy changes we will update the effective date above, and post
+        the revised policy here before the change takes effect. If a change
+        materially affects how your information is handled we will make it clear
+        in the app as well. Continuing to use Deadstop after a change means you
+        accept the revised policy.
+      </p>
+      <p>
+        Deadstop is published by <span class="js-entity">Shreyas Rao</span>, the
+        data controller for the purposes of this policy. Questions, requests and
+        complaints all go to the same place:
+      </p>
+      <p><a class="js-mail" href="#">support@deadstop.app</a></p>
+    </section>
+
+    <div class="legal-foot">
+      <p>
+        &copy; <span class="js-year">2026</span> Deadstop.  ·&nbsp;
+        <a href="?page=terms">Terms of Use</a>  ·&nbsp;
+        <a href="./">Home</a>
+      </p>
+    </div>
+  </div>
+</article>
+
+<!-- ======================================================================= -->
+<!-- TERMS OF USE  (End User License Agreement)                              -->
+<!-- Includes the minimum terms Apple requires of a custom EULA under        -->
+<!-- Schedule 2 of the Apple Developer Program License Agreement.            -->
+<!-- ======================================================================= -->
+<article id="page-terms" class="legal">
+  <div class="legal-wrap">
+    <a class="legal-back" href="./">&larr; Deadstop</a>
+
+    <h1 class="legal-title">Terms of Use</h1>
+    <p class="legal-date">End User License Agreement ·&nbsp;Effective <span class="js-date">September 12, 2026</span></p>
+
+    <div class="legal-intro">
+      <p>
+        This is the agreement between you and <strong><span class="js-entity">Shreyas
+        Rao</span></strong> ("we", "us"), the developer of Deadstop, covering your
+        use of the app. Please read section 04 in particular: Deadstop is a
+        training tool, not medical advice, and it blocks apps on your phone, both
+        of which carry limits you should understand before you rely on it.
+      </p>
+      <p>
+        <strong>This agreement is between you and us alone. Apple is not a
+        party to it</strong>, and is not responsible for Deadstop or its contents.
+      </p>
+    </div>
+
+    <nav class="toc" aria-label="Contents">
+      <span class="label">Contents</span>
+      <ol>
+        <li><a href="#t-accept">Accepting these terms</a></li>
+        <li><a href="#t-what">What Deadstop is</a></li>
+        <li><a href="#t-license">Licence &amp; usage rules</a></li>
+        <li><a href="#t-health">Health, safety &amp; reliance</a></li>
+        <li><a href="#t-eligibility">Eligibility</a></li>
+        <li><a href="#t-acceptable">Acceptable use</a></li>
+        <li><a href="#t-subs">Subscriptions &amp; billing</a></li>
+        <li><a href="#t-ip">Intellectual property</a></li>
+        <li><a href="#t-third">Third-party terms</a></li>
+        <li><a href="#t-support">Maintenance &amp; support</a></li>
+        <li><a href="#t-warranty">Warranty</a></li>
+        <li><a href="#t-claims">Product claims</a></li>
+        <li><a href="#t-liability">Limitation of liability</a></li>
+        <li><a href="#t-legal">Legal compliance</a></li>
+        <li><a href="#t-apple">Apple as beneficiary</a></li>
+        <li><a href="#t-general">Termination, law &amp; contact</a></li>
+      </ol>
+    </nav>
+
+    <section id="t-accept">
+      <h2><span class="n">01</span> Accepting these terms</h2>
+      <p>
+        By downloading, installing or using Deadstop you agree to these Terms of
+        Use and to our <a href="?page=privacy">Privacy Policy</a>, which is part of
+        this agreement. If you do not agree, do not use the app, and if you have
+        already installed it, delete it.
+      </p>
+      <p>
+        We may update these terms. When we do we will change the effective date
+        above and post the revised terms here. Material changes will be signalled
+        in the app. Continuing to use Deadstop after a change means you accept the
+        revised terms; if you don't, stop using the app and cancel any subscription.
+      </p>
+    </section>
+
+    <section id="t-what">
+      <h2><span class="n">02</span> What Deadstop is</h2>
+      <p>
+        Deadstop is an iPhone app that runs a rest timer between your working sets
+        and, with your permission, uses Apple's Screen Time system to block apps
+        you have chosen while that timer runs. It also records your training, can
+        write finished sessions to Apple Health, and can start a session when you
+        arrive at a gym you have marked.
+      </p>
+      <p>
+        Deadstop restricts your own device, at your own request. It is not a
+        parental control. It cannot be used to restrict or monitor anyone else's
+        device, and it reports nothing to any third party.
+      </p>
+    </section>
+
+    <section id="t-license">
+      <h2><span class="n">03</span> Licence &amp; usage rules</h2>
+      <p>
+        We grant you a personal, limited, non-exclusive, non-transferable,
+        revocable licence to use Deadstop on Apple-branded devices that you own or
+        control, as permitted by the Usage Rules in the Apple Media Services Terms
+        and Conditions. This licence does not allow you to use Deadstop on a device
+        you do not own or control, and you may not distribute or make it available
+        over a network where it could be used by multiple devices at once. You may
+        use it under Family Sharing or volume purchasing where Apple permits.
+      </p>
+      <p>You may not, and may not permit anyone else to:</p>
+      <ul>
+        <li>Copy, modify, translate or create derivative works of Deadstop, except as permitted by law.</li>
+        <li>Reverse engineer, decompile or disassemble it, or attempt to derive its source code, except to the extent that applicable law expressly permits despite this limitation.</li>
+        <li>Rent, lease, lend, sell, sublicense, redistribute or transfer it.</li>
+        <li>Remove or alter any proprietary notices.</li>
+        <li>Circumvent its subscription controls, or use it in a way that interferes with iOS or with other apps.</li>
+      </ul>
+      <p>
+        We reserve all rights not expressly granted. This licence is granted, not
+        sold, and terminates automatically if you breach it.
+      </p>
+    </section>
+
+    <section id="t-health">
+      <h2><span class="n">04</span> Health, safety &amp; reliance</h2>
+
+      <div class="callout">
+        <span class="label label-signal">Not medical advice</span>
+        <p>
+          Deadstop is a general fitness and productivity tool. It is
+          <strong>not a medical device</strong> and does not provide medical
+          advice, diagnosis or treatment. Rest intervals, training suggestions and
+          any health figures it displays are informational only and are not a
+          substitute for professional judgement.
+        </p>
+      </div>
+
+      <p style="margin-top:20px;">
+        Resistance training carries risk of injury. Consult a qualified physician
+        before starting or changing a training programme, particularly if you have
+        a medical condition, are pregnant, are recovering from injury, or are
+        taking medication. <strong>Stop immediately and seek medical attention if
+        you experience pain, dizziness, chest discomfort, shortness of breath or
+        any other symptom.</strong> You train at your own risk, and you are
+        responsible for your own form, loading and judgement, not the app.
+      </p>
+      <p>
+        Health values shown in Deadstop are read from Apple Health and are only as
+        accurate as the devices that recorded them. Do not use them to make medical
+        decisions.
+      </p>
+
+      <h4>The blocking feature</h4>
+      <p>
+        App blocking is performed by Apple's Screen Time frameworks, and how
+        reliably and how quickly a restriction applies or lifts depends on iOS,
+        your device state, battery level and system conditions that are outside our
+        control. We do not warrant that blocking will be instantaneous,
+        uninterrupted or effective in every circumstance.
+      </p>
+      <p>
+        <strong>Do not rely on Deadstop in any situation where being unable to
+        reach an app could cause harm.</strong> You alone choose which apps to
+        block, and you should not block anything you may need urgently. Deadstop
+        does not restrict phone calls, emergency calls or emergency services, but
+        you remain responsible for your selection. You can end a session, disable
+        blocking, revoke Screen Time access in iOS Settings, or delete the app at
+        any time, and all restrictions lift.
+      </p>
+      <p>
+        Likewise, rest alerts depend on notification and alarm delivery by iOS, and
+        we cannot guarantee that any given alert arrives at a given moment.
+      </p>
+    </section>
+
+    <section id="t-eligibility">
+      <h2><span class="n">05</span> Eligibility</h2>
+      <p>
+        You must be at least 13 years old to use Deadstop. If you are under the
+        age of majority where you live, you may use it only with the involvement
+        of a parent or guardian who agrees to these terms on your behalf. By using
+        Deadstop you represent that you meet these requirements and have the legal
+        capacity to enter this agreement.
+      </p>
+    </section>
+
+    <section id="t-acceptable">
+      <h2><span class="n">06</span> Acceptable use</h2>
+      <p>You agree not to use Deadstop:</p>
+      <ul>
+        <li>To restrict, monitor or interfere with a device that is not your own, or with another person's use of their device.</li>
+        <li>In any unlawful way, or to violate anyone's rights.</li>
+        <li>To attempt to gain unauthorised access to any system, or to probe, scan or test the security of the app or its providers.</li>
+        <li>To interfere with, disrupt or overload any service Deadstop relies on.</li>
+      </ul>
+      <p>We may terminate your licence if you use Deadstop in any of these ways.</p>
+    </section>
+
+    <section id="t-subs">
+      <h2><span class="n">07</span> Subscriptions &amp; billing</h2>
+      <p>
+        Deadstop is free to download and includes the rest timer at no cost.
+        <strong>Deadstop Pro</strong> unlocks app blocking, Scroll Seconds, gym
+        arrival and Stats. It is offered as:
+      </p>
+      <ul>
+        <li><strong>Monthly</strong>, an auto-renewing subscription, US$4.99 per month, following a 1-week free trial.</li>
+        <li><strong>Yearly</strong>, an auto-renewing subscription, US$29.99 per year, following a 1-week free trial.</li>
+        <li><strong>Lifetime</strong>, a one-time purchase, US$59.99, which does not renew.</li>
+      </ul>
+      <p>
+        Prices are shown in US dollars and may differ by storefront; the price
+        shown in the app at the time of purchase, in your local currency and
+        inclusive of applicable taxes, is the price that applies. We may change
+        prices for future billing periods, and where required we will give you
+        notice and the chance to cancel first.
+      </p>
+
+      <div class="callout">
+        <span class="label label-signal">Auto-renewal terms</span>
+        <p>
+          Payment is charged to your Apple Account at confirmation of purchase.
+          <strong>A subscription renews automatically unless auto-renew is turned
+          off at least 24 hours before the end of the current period.</strong>
+          Your account is charged for renewal within 24 hours prior to the end of
+          the current period, at the price for the plan you selected. You can
+          manage your subscription and turn off auto-renewal in your Apple Account
+          settings after purchase. If you buy a subscription while a free trial is
+          running, any unused portion of that trial is forfeited.
+        </p>
+      </div>
+
+      <p style="margin-top:20px;">
+        <strong>Cancellation and refunds.</strong> Apple is the merchant of record
+        for every purchase. Cancel a subscription in Settings on your iPhone, under
+        your Apple Account, then Subscriptions, cancelling stops the next renewal
+        and you keep Pro until the period you already paid for ends. Refunds are
+        handled by Apple under the Apple Media Services Terms and Conditions; we
+        cannot issue them. Request one at
+        <a href="https://reportaproblem.apple.com" rel="noopener">reportaproblem.apple.com</a>.
+        Deleting the app does not cancel a subscription.
+      </p>
+      <p>
+        <strong>Restoring.</strong> Purchases are tied to your Apple Account. Use
+        Restore Purchases in Deadstop's settings to recover Pro on a reinstall or
+        a new device.
+      </p>
+      <p>
+        <strong>If Pro lapses.</strong> Blocking and the other Pro features stop.
+        Nothing is deleted, your training history stays on your device, and every
+        Screen Time restriction is released.
+      </p>
+      <p>
+        Where you have a statutory right of withdrawal, for example as a consumer
+        in the EU or UK, that right is unaffected by anything in this section, and
+        is exercised through Apple.
+      </p>
+    </section>
+
+    <section id="t-ip">
+      <h2><span class="n">08</span> Intellectual property</h2>
+      <p>
+        Deadstop, its name, wordmark, icon, design, interface and all software and
+        content in it are owned by us and protected by copyright, trademark and
+        other laws. Nothing in this agreement transfers any ownership to you.
+      </p>
+      <p>
+        The training data you enter is yours. It stays on your device. We do not
+        claim any right to it, and we could not use it if we wanted to. We never
+        receive it.
+      </p>
+      <p>
+        <strong>We are solely responsible</strong> for investigating, defending,
+        settling and discharging any claim that Deadstop or your permitted use of
+        it infringes a third party's intellectual property rights. Apple has no
+        such responsibility.
+      </p>
+    </section>
+
+    <section id="t-third">
+      <h2><span class="n">09</span> Third-party terms</h2>
+      <p>
+        You must comply with any applicable third-party terms when using Deadstop,
+        including the Apple Media Services Terms and Conditions, and your wireless
+        carrier's agreement. Deadstop relies on Apple frameworks and services
+        (Screen Time, HealthKit, Apple Maps, In-App Purchase) and on RevenueCat for
+        subscription management; those providers' own terms and privacy practices
+        apply to what they do, and we are not responsible for them.
+      </p>
+    </section>
+
+    <section id="t-support">
+      <h2><span class="n">10</span> Maintenance &amp; support</h2>
+      <p>
+        <strong>We are solely responsible for providing any maintenance and support
+        for Deadstop.</strong> Apple has no obligation whatsoever to furnish any
+        maintenance or support services for it.
+      </p>
+      <p>
+        Support is available at
+        <a class="js-mail" href="#">support@deadstop.app</a>. We provide it on a
+        reasonable-efforts basis and make no guarantee of a specific response time.
+        We may change, suspend or discontinue any part of Deadstop, though we will
+        not deliberately disable a paid feature you are entitled to during a period
+        you have paid for.
+      </p>
+    </section>
+
+    <section id="t-warranty">
+      <h2><span class="n">11</span> Warranty</h2>
+      <p>
+        Deadstop is provided <strong>"as is" and "as available", without warranty
+        of any kind.</strong> To the fullest extent permitted by law we disclaim
+        all warranties, express or implied, including merchantability, fitness for
+        a particular purpose, non-infringement, accuracy, and uninterrupted or
+        error-free operation. We do not warrant that Deadstop will meet your
+        requirements, that blocking will always apply or lift when expected, or
+        that alerts will always be delivered.
+      </p>
+      <p>
+        <strong>In the event of any failure of Deadstop to conform to any
+        applicable warranty, you may notify Apple, and Apple will refund the
+        purchase price of the application to you</strong> (where a purchase price
+        was paid). To the maximum extent permitted by applicable law, Apple has no
+        other warranty obligation whatsoever with respect to Deadstop, and any
+        other claims, losses, liabilities, damages, costs or expenses attributable
+        to any failure to conform to any warranty are our sole responsibility.
+      </p>
+      <p>
+        Some jurisdictions do not allow the exclusion of implied warranties, so
+        some of the above may not apply to you, and you may have statutory
+        consumer rights that this agreement does not affect.
+      </p>
+    </section>
+
+    <section id="t-claims">
+      <h2><span class="n">12</span> Product claims</h2>
+      <p>
+        <strong>We, not Apple, are responsible for addressing any claims</strong>
+        by you or any third party relating to Deadstop or your possession and use
+        of it, including: product liability claims; any claim that Deadstop fails
+        to conform to any applicable legal or regulatory requirement; and claims
+        arising under consumer protection, privacy or similar legislation,
+        including in connection with its use of HealthKit and Family Controls.
+        This agreement does not limit our liability to you beyond what applicable
+        law permits.
+      </p>
+    </section>
+
+    <section id="t-liability">
+      <h2><span class="n">13</span> Limitation of liability</h2>
+      <p>
+        To the fullest extent permitted by law, we will not be liable for any
+        indirect, incidental, special, consequential, exemplary or punitive
+        damages, or for lost profits, lost data, or loss of goodwill, arising out
+        of or relating to Deadstop, whether in contract, tort or otherwise, even
+        if we have been advised of the possibility.
+      </p>
+      <p>
+        To the fullest extent permitted by law, our total aggregate liability
+        arising out of or relating to Deadstop is limited to the greater of the
+        amount you paid us for it in the twelve months before the claim arose, or
+        US$50.
+      </p>
+      <p>
+        <strong>Nothing in this agreement excludes or limits our liability for
+        death or personal injury caused by our negligence, for fraud or fraudulent
+        misrepresentation, or for anything else that cannot lawfully be excluded
+        or limited.</strong> Some jurisdictions do not allow certain exclusions, so
+        parts of this section may not apply to you.
+      </p>
+      <p>
+        You agree to indemnify and hold us harmless from any claim arising out of
+        your breach of these terms or your misuse of Deadstop, except to the extent
+        it arises from our own act or omission.
+      </p>
+    </section>
+
+    <section id="t-legal">
+      <h2><span class="n">14</span> Legal compliance</h2>
+      <p>You represent and warrant that:</p>
+      <ul>
+        <li>You are not located in a country that is subject to a U.S. Government embargo, or that has been designated by the U.S. Government as a "terrorist supporting" country; and</li>
+        <li>You are not listed on any U.S. Government list of prohibited or restricted parties.</li>
+      </ul>
+      <p>
+        You also agree to comply with all applicable local, state, national and
+        international laws in your use of Deadstop, including export control laws.
+      </p>
+    </section>
+
+    <section id="t-apple">
+      <h2><span class="n">15</span> Apple as third-party beneficiary</h2>
+      <p>
+        You acknowledge and agree that <strong>Apple, and Apple's subsidiaries, are
+        third-party beneficiaries of this agreement, and that upon your acceptance
+        of these terms Apple will have the right (and will be deemed to have
+        accepted the right) to enforce this agreement against you as a third-party
+        beneficiary of it.</strong>
+      </p>
+      <p>
+        You further acknowledge that this agreement is concluded between you and us
+        only, and not with Apple; that we, not Apple, are solely responsible for
+        Deadstop and its content; and that Apple is not responsible for the app,
+        for any third-party claims relating to it, or for addressing any of your
+        questions or complaints about it.
+      </p>
+    </section>
+
+    <section id="t-general">
+      <h2><span class="n">16</span> Termination, governing law &amp; contact</h2>
+      <p>
+        <strong>Termination.</strong> This agreement is effective until terminated.
+        You may terminate it at any time by deleting Deadstop and cancelling any
+        subscription. We may terminate it if you materially breach it. On
+        termination you must stop using Deadstop and delete it; sections 08, 11,
+        12, 13, 14 and 15 survive.
+      </p>
+      <p>
+        <strong>Governing law.</strong> These terms are governed by the laws of
+        <span class="js-jurisdiction">the State of California, United States</span>,
+        without regard to its conflict-of-laws rules, and you and we submit to the
+        exclusive jurisdiction of its courts. If you are a consumer resident in the
+        EU, the UK or another jurisdiction whose law grants you the protection of
+        your local mandatory consumer rules and local courts, nothing here deprives
+        you of them.
+      </p>
+      <p>
+        <strong>Severability &amp; entire agreement.</strong> If any provision is
+        held unenforceable, it is modified to the minimum extent necessary and the
+        rest remains in force. Our failure to enforce a provision is not a waiver of
+        it. These terms and the Privacy Policy are the entire agreement between you
+        and us about Deadstop, and supersede any prior understanding. You may not
+        assign this agreement; we may assign it in connection with a merger or sale
+        of the business.
+      </p>
+      <p>
+        <strong>Contact.</strong> Deadstop is developed and published by
+        <span class="js-entity">Shreyas Rao</span>. For questions about these terms,
+        for support, or for the postal address for formal notices, write to
+        <a class="js-mail" href="#">support@deadstop.app</a>.
+      </p>
+    </section>
+
+    <div class="legal-foot">
+      <p>
+        &copy; <span class="js-year">2026</span> Deadstop.  ·&nbsp;
+        <a href="?page=privacy">Privacy Policy</a>  ·&nbsp;
+        <a href="./">Home</a>
+      </p>
+    </div>
+  </div>
+</article>
+
+<!-- ======================================================================= -->
+<!-- FOOTER                                                                  -->
+<!-- ======================================================================= -->
+<footer>
+  <div class="wrap foot-inner">
+    <div>
+      <a class="nav-mark foot-mark" href="./" style="margin-bottom:10px;" aria-label="Deadstop — home">
+        <img class="icon-mark" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABABAMAAABYR2ztAAAAMFBMVEXxOQcTFBQvGRLQNAmSKg1wJA+qLQtKHRG6MApZIBAAAAAAAAAAAAAAAAAAAAAAAAA3n/mhAAAAEHRSTlP/////////////AAAAAAAAPTr+NwAAAc1JREFUeNrtkz1LA0EQht/c5ZJLMJCNHyiKiqWiBG0so61NSoWA6D9QLCz96Kz8A4Jiq7Wd5CccFjZCkiJgVMSzUE6TeBa3e9nZXbCx063m9p6beWfmPeBPnITyvICuRy5sKXaXyg/3L9bQwUfdmCE16otw+TK+tXrASvwe13uGDE6fVM161jNUZGmhQeRrACDBMpkAABYbagbbB/q3x2u12tQOgKI2kCRjBRFvMDapiXT64DzyOJ3tqZTaRFcEX3I/km5busxpgCUB00BZAz7zCIT0PODpc1hqoHh32D8zlmslArgtrc99xga3GGOssMbYiGEX6axEp1v6Loh1dg3rbv9kufm6PPgnPcOL/F2npGXIuCSzvotVWjrUBvUaUEI4RgBJ/snAXDMKAp+W4KB7d8XX9K5omOYTBM6pCKu3QERWDKl7FMCPw7BIgck4g8PVlWkXD1GXt2+wnehm2NNMC6BdxBG9sbT1Vc0Ar5jyhFzhSgE04ubOzBn8eDxcY8IzArl4QrbiB27ZwRLCC2JbASRzSjPrx7REJ68AvjqHEn2fOlU9Sf4bkyc/aI1ZfdQESFZ14EYmZgzL6jZ7xGbV+Mu6Fb6RiRP8n18/39+eZKpWKjzZAAAAAElFTkSuQmCC" alt="" aria-hidden="true" width="24" height="24" />
+        <span class="wordmark" style="font-size:17px;">Deadstop</span>
+      </a>
+      <p class="foot-note">
+        A rest timer that blocks your apps. Built for iPhone.<br />
+        &copy; <span class="js-year">2026</span> Deadstop. All rights reserved.
+      </p>
+    </div>
+    <div class="foot-links">
+      <a href="?page=privacy">Privacy Policy</a>
+      <a href="?page=terms">Terms of Use</a>
+      <a class="js-mail" href="#">Support</a>
+      <a class="js-appstore" href="#" data-soon="App Store">App Store</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var C = window.DEADSTOP || {};
+
+  /* ---- Fill every configured value in one pass ------------------------- */
+  function setText(sel, value) {
+    if (!value) return;
+    document.querySelectorAll(sel).forEach(function (el) { el.textContent = value; });
+  }
+  setText('.js-entity', C.legalEntity);
+  setText('.js-jurisdiction', C.jurisdiction);
+  setText('.js-date', C.effectiveDate);
+  setText('.js-year', String(new Date().getFullYear()));
+
+  if (C.contactEmail) {
+    document.querySelectorAll('a.js-mail').forEach(function (a) {
+      a.href = 'mailto:' + C.contactEmail;
+      if (a.textContent.indexOf('@') > -1) a.textContent = C.contactEmail;
+    });
+  }
+
+  /* The App Store links. Until a URL is configured, every one of them
+     degrades to a calm "coming soon" rather than a dead link — a broken
+     download button is worse than an honest one. */
+  document.querySelectorAll('a.js-appstore').forEach(function (a) {
+    if (C.appStoreURL) {
+      a.href = C.appStoreURL;
+      a.rel = 'noopener';
+      return;
+    }
+    a.removeAttribute('href');
+    a.setAttribute('aria-disabled', 'true');
+    a.setAttribute('role', 'link');
+    var fallback = a.getAttribute('data-soon') || 'Coming to the App Store';
+    /* Replace only the trailing text node, so the Apple glyph survives. */
+    var last = a.lastChild;
+    if (last && last.nodeType === 3) { last.nodeValue = ' ' + fallback; }
+    else { a.textContent = fallback; }
+  });
+
+  /* ---- Canonicalise the URL -------------------------------------------- */
+  /* Someone arriving via #privacy gets rewritten to ?page=privacy. Without
+     this, clicking a Contents link replaces the hash and a reload would land
+     back on the home page. */
+  var view = document.documentElement.getAttribute('data-view');
+  if ((view === 'privacy' || view === 'terms') &&
+      new URLSearchParams(location.search).get('page') !== view) {
+    history.replaceState(null, '', '?page=' + view);
+  }
+
+  /* ---- Nav hairline on scroll ------------------------------------------ */
+  var nav = document.getElementById('nav');
+  var onScroll = function () { nav.classList.toggle('stuck', window.scrollY > 8); };
+  onScroll();
+  window.addEventListener('scroll', onScroll, { passive: true });
+
+  /* ---- Reveal ---------------------------------------------------------- */
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var items = document.querySelectorAll('.fade-up');
+  if (reduced || !('IntersectionObserver' in window)) {
+    items.forEach(function (el) { el.classList.add('in'); });
+  } else {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e, i) {
+        if (!e.isIntersecting) return;
+        /* A short stagger within a row, then it stops. Nothing springs,
+           nothing overshoots — the app doesn't, and neither does this. */
+        var d = Math.min(i, 4) * 55;
+        setTimeout(function () { e.target.classList.add('in'); }, d);
+        io.unobserve(e.target);
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
+    items.forEach(function (el) { io.observe(el); });
+  }
+
+})();
+</script>
+
+<!--
+  ===========================================================================
+  REPLACING THE HERO IMAGE
+
+  The <img> in .hero-art above is embedded as a base64 WebP so this stays one
+  file. To swap it for something else:
+
+    Background colour to export against:  #0B0B0C
+    Roughly portrait, close to 4:5 works best in the two-column layout.
+
+  There is deliberately no fixed aspect-ratio box around it: the container
+  just takes the photo's own proportions from its width/height attributes,
+  so it always fills edge to edge with no letterboxed gap, whatever ratio
+  the next photo actually is.
+
+  1. Export the new artwork, then re-encode it small rather than pasting a raw
+     PNG straight in — a photo embeds far lighter as WebP:
+
+       cwebp -q 90 new-hero.png -o new-hero.webp
+       base64 -i new-hero.webp | pbcopy
+
+  2. Replace the src="data:image/webp;base64,..." above with the new string,
+     and update width/height to the new file's real pixel dimensions (get
+     them with `sips -g pixelWidth -g pixelHeight new-hero.png`) — those
+     attributes are what the no-letterbox sizing depends on. Update alt too.
+
+  A flat graphic with hard edges (an icon, a screenshot mockup with sharp UI
+  text) can instead go in as PNG the same way, dropping -q 90 for a lossless
+  cwebp -z 9, or just base64-encode the PNG directly if it's small.
+  ===========================================================================
+-->
+
+</body>
+</html>
